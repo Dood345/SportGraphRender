@@ -104,10 +104,10 @@ ifeq ($(wildcard $(ACTIVATE_PATH)),)
 venv-ensure:
 ifeq ($(OS),Windows_NT)
 	@echo "Virtual environment not found. Creating and installing dependencies..."
-	@$(MAKE) install
+	@$(MAKE) venv-install
 else
 	@echo "Virtual environment not found. Creating and installing dependencies..."
-	@$(MAKE) install
+	@$(MAKE) venv-install
 endif
 else
 venv-ensure:

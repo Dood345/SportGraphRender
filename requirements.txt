@@ -1,6 +1,3 @@
-setuptools
-selenium
-beautifulsoup4
-undetected-chromedriver
-
-# python script/scrape_fbref.py
+version https://git-lfs.github.com/spec/v1
+oid sha256:eec3355cfb9165c1de8275a46dbfbeb6f5a720e30e97757ad17992752f1590dc
+size 96

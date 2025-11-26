@@ -190,6 +190,9 @@ def store_player_club_history(driver: WebDriver, url: str, csv_writer) -> None:
         except:
             apps = 0
 
+        if not season or not club:
+            continue
+
         records.append((season, club, apps))
     
     if not records:
@@ -206,12 +209,12 @@ def store_player_club_history(driver: WebDriver, url: str, csv_writer) -> None:
             end_season = season
             apps_season += apps
         else:
-            csv_writer.writerow([player_name, current_club, start_season, end_season, apps_season])
+            csv_writer.writerow([player_id, player_name, current_club, start_season, end_season, apps_season])
             current_club = club
             start_season = end_season = season
             apps_season = apps
 
-    csv_writer.writerow([player_name, current_club, start_season, end_season, apps_season])
+    csv_writer.writerow([player_id, player_name, current_club, start_season, end_season, apps_season])
 
 
 if __name__ == "__main__":
@@ -263,7 +266,7 @@ if __name__ == "__main__":
 
         # only write header if file was empty
         if f.tell() == 0:
-            writer.writerow(["player", "club", "start", "end", "appearances"])
+            writer.writerow(["player_id", "player_name", "club", "start", "end", "appearances"])
 
         # ["https://fbref.com/en/players/d70ce98e/Lionel-Messi"]
         for idx, link in enumerate(player_links, start=1):
