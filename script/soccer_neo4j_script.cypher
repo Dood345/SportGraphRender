@@ -1,8 +1,12 @@
-// script to delete all nodes
+// -----------------------------
+// 1. Delete EVERYTHING (reset DB)
+// -----------------------------
 MATCH (n)
 DETACH DELETE n;
 
-// script to load all from save.csv
+// -----------------------------
+// 2. Create Constraints
+// -----------------------------
 CREATE CONSTRAINT player_id_unique IF NOT EXISTS
 FOR (p:Player)
 REQUIRE p.id IS UNIQUE;
@@ -11,6 +15,9 @@ CREATE CONSTRAINT club_name_unique IF NOT EXISTS
 FOR (c:Club)
 REQUIRE c.name IS UNIQUE;
 
+// -----------------------------
+// 3. Load save.csv Into Graph
+// -----------------------------
 LOAD CSV WITH HEADERS FROM "https://media.githubusercontent.com/media/joopixel1/SportGraph/refs/heads/main/data/save.csv" AS row
 
 WITH row
@@ -50,12 +57,16 @@ SET
   r.end_year = re,
   r.appearances = apps;
 
-// script to view 1000 relationships
+// -----------------------------
+// 4. View 1000 Relationships
+// -----------------------------
 MATCH p = ()-[]->()
 RETURN p
 LIMIT 1000;
 
-// script to create played_with relationship
+// -----------------------------
+// 5. Create PLAYED_WITH Relationships
+// -----------------------------
 MATCH (p1:Player)-[r1:PLAYED_FOR]->(c:Club)<-[r2:PLAYED_FOR]-(p2:Player)
 WHERE
   p1.id < p2.id AND
@@ -80,126 +91,188 @@ SET
   pw.seasons_overlap = overlap_end - overlap_start + 1,
   pw.weight = weight;
 
-// script to delet clubs and played for relationships
+// -----------------------------
+// 6. Delete Clubs + PLAYED_FOR Only
+// -----------------------------
 MATCH ()-[r:PLAYED_FOR]-()
 DELETE r;
 
 MATCH (c:Club)
 DELETE c;
 
-// get 3 players relationship
-MATCH (a:Player)-[ab:PLAYED_WITH]-(b:Player)-[bc:PLAYED_WITH]-(c:Player)
-WHERE
-  a.id <> b.id AND
-  b.id <> c.id AND
-  a.id <> c.id AND
-  a.id < c.id AND
-  ab.club <> bc.club AND
-  NOT ((a)-[:PLAYED_WITH]-(c))
+// -----------------------------
+// 7. 1-Relationship Chain (A–B)
+// -----------------------------
+MATCH (a:Player)
+CALL
+  apoc.path.expandConfig(
+    a,
+    {
+      relationshipFilter: "PLAYED_WITH>",
+      minLevel: 1,
+      maxLevel: 1,
+      uniqueness: "NODE_GLOBAL",
+      bfs: true,
+      filterStartNode: true
+    }
+  )
+  YIELD path
 
-RETURN
-  a.name AS Player_A,
-  ab.club AS Club_AB,
-  b.name AS Player_B,
-  bc.club AS Club_BC,
-  c.name AS Player_C,
-  (ab.weight + bc.weight) AS total_weight
-ORDER BY total_weight DESC
+WITH path, nodes(path) AS nds, relationships(path) AS rels
+WHERE size(rels) = 1
+
+WITH nds[0] AS A, nds[1] AS B, rels[0] AS ab
+
+// Canonical ordering A.id < B.id (avoids A–B and B–A duplicates)
+WHERE A.id < B.id
+
+WITH A, B, ab, ab.weight AS total_weight
+
+RETURN A.name AS Player_A, ab.club AS Club_AB, B.name AS Player_B, total_weight
+ORDER BY total_weight * rand() DESC
 LIMIT 1000;
 
-// get 4 players relationship
-MATCH (a:Player)-[ab:PLAYED_WITH]-(b:Player)
-MATCH (b)-[bc:PLAYED_WITH]-(c:Player)
-MATCH (c)-[cd:PLAYED_WITH]-(d:Player)
+// -----------------------------
+// 8. 2-Relationship Chain (A–B–C)
+// -----------------------------
+MATCH (a:Player)
+CALL
+  apoc.path.expandConfig(
+    a,
+    {
+      relationshipFilter: "PLAYED_WITH>",
+      minLevel: 2,
+      maxLevel: 2,
+      uniqueness: "NODE_GLOBAL",
+      bfs: true,
+      filterStartNode: true
+    }
+  )
+  YIELD path
 
-WHERE
-  a.id <> b.id AND
-  b.id <> c.id AND
-  c.id <> d.id AND
-  a.id <> c.id AND
-  a.id <> d.id AND
-  b.id <> d.id
+WITH path, nodes(path) AS nds, relationships(path) AS rels
+WHERE size(rels) = 2 AND rels[0].club <> rels[1].club
 
-  // Avoid mirrored duplicates (canonical ordering)
-  AND
-  a.id < d.id
+WITH nds[0] AS A, nds[1] AS B, nds[2] AS C, rels[0] AS ab, rels[1] AS bc
 
-  // Every link must be from a different club
-  AND
-  ab.club <> bc.club AND
-  bc.club <> cd.club
+WHERE A.id < C.id AND NOT (A)-[:PLAYED_WITH]-(C)
 
-  // No shortcuts: A does NOT connect to C or D or B to D
-  AND
-  NOT ((a)-[:PLAYED_WITH]-(c)) AND
-  NOT ((a)-[:PLAYED_WITH]-(d)) AND
-  NOT ((b)-[:PLAYED_WITH]-(d))
-
-WITH a, b, c, d, ab, bc, cd, (ab.weight + bc.weight + cd.weight) AS total_weight
+WITH A, B, C, ab, bc, (ab.weight + bc.weight) AS total_weight
 
 RETURN
-  a.name AS Player_A,
+  A.name AS Player_A,
   ab.club AS Club_AB,
-  b.name AS Player_B,
+  B.name AS Player_B,
   bc.club AS Club_BC,
-  c.name AS Player_C,
-  cd.club AS Club_CD,
-  d.name AS Player_D,
+  C.name AS Player_C,
   total_weight
-ORDER BY total_weight DESC
+ORDER BY total_weight * rand() DESC
 LIMIT 1000;
 
-// 5-player relationship chain
-MATCH (a:Player)-[ab:PLAYED_WITH]-(b:Player)
-MATCH (b)-[bc:PLAYED_WITH]-(c:Player)
-MATCH (c)-[cd:PLAYED_WITH]-(d:Player)
-MATCH (d)-[de:PLAYED_WITH]-(e:Player)
+// -----------------------------
+// 9. 3-Relationship Chain (A–B–C–D)
+// -----------------------------
+MATCH (a:Player)
+CALL
+  apoc.path.expandConfig(
+    a,
+    {
+      relationshipFilter: "PLAYED_WITH>",
+      minLevel: 3,
+      maxLevel: 3,
+      uniqueness: "NODE_GLOBAL",
+      bfs: true,
+      filterStartNode: true
+    }
+  )
+  YIELD path
 
+WITH path, nodes(path) AS nds, relationships(path) AS rels
 WHERE
-  // all players distinct
-  a.id <> b.id AND
-  b.id <> c.id AND
-  c.id <> d.id AND
-  d.id <> e.id AND
-  a.id <> c.id AND
-  a.id <> d.id AND
-  a.id <> e.id AND
-  b.id <> d.id AND
-  b.id <> e.id AND
-  c.id <> e.id
-
-  // canonical ordering to avoid A-B-C-D-E and E-D-C-B-A duplicates
-  AND
-  a.id < e.id
-
-  // clubs must all be different along the chain
-  AND
-  ab.club <> bc.club AND
-  bc.club <> cd.club AND
-  cd.club <> de.club
-
-  // no shortcut PLAYED_WITH edges:
-  // A cannot reach C/D/E directly
-  AND
-  NOT ((a)-[:PLAYED_WITH]-(c)) AND
-  NOT ((a)-[:PLAYED_WITH]-(d)) AND
-  NOT ((a)-[:PLAYED_WITH]-(e))
-
-  // B cannot reach D/E directly
-  AND
-  NOT ((b)-[:PLAYED_WITH]-(d)) AND
-  NOT ((b)-[:PLAYED_WITH]-(e))
-
-  // C cannot reach E directly
-  AND
-  NOT ((c)-[:PLAYED_WITH]-(e))
+  size(rels) = 3 AND
+  rels[0].club <> rels[1].club AND
+  rels[1].club <> rels[2].club
 
 WITH
-  a,
-  b,
-  c,
-  d,
-  e,
+  nds[0] AS A,
+  nds[1] AS B,
+  nds[2] AS C,
+  nds[3] AS D,
+  rels[0] AS ab,
+  rels[1] AS bc,
+  rels[2] AS cd
+
+WHERE
+  A.id < D.id AND
+  NOT (A)-[:PLAYED_WITH]-(C) AND
+  NOT (A)-[:PLAYED_WITH]-(D) AND
+  NOT (B)-[:PLAYED_WITH]-(D)
+
+WITH A, B, C, D, ab, bc, cd, (ab.weight + bc.weight + cd.weight) AS total_weight
+
+RETURN
+  A.name AS Player_A,
+  ab.club AS Club_AB,
+  B.name AS Player_B,
+  bc.club AS Club_BC,
+  C.name AS Player_C,
+  cd.club AS Club_CD,
+  D.name AS Player_D,
+  total_weight
+ORDER BY total_weight * rand() DESC
+LIMIT 1000;
+
+// -----------------------------
+// 10. 4-Relationship Chain (A–B–C–D–E)
+// -----------------------------
+MATCH (a:Player)
+CALL
+  apoc.path.expandConfig(
+    a,
+    {
+      relationshipFilter: "PLAYED_WITH>",
+      minLevel: 4,
+      maxLevel: 4,
+      uniqueness: "NODE_GLOBAL",
+      bfs: true,
+      filterStartNode: true
+    }
+  )
+  YIELD path
+
+WITH path, nodes(path) AS nds, relationships(path) AS rels
+WHERE
+  size(rels) = 4 AND
+  rels[0].club <> rels[1].club AND
+  rels[1].club <> rels[2].club AND
+  rels[2].club <> rels[3].club
+
+WITH
+  nds[0] AS A,
+  nds[1] AS B,
+  nds[2] AS C,
+  nds[3] AS D,
+  nds[4] AS E,
+  rels[0] AS ab,
+  rels[1] AS bc,
+  rels[2] AS cd,
+  rels[3] AS de
+
+WHERE
+  A.id < E.id AND
+  NOT (A)-[:PLAYED_WITH]-(C) AND
+  NOT (A)-[:PLAYED_WITH]-(D) AND
+  NOT (A)-[:PLAYED_WITH]-(E) AND
+  NOT (B)-[:PLAYED_WITH]-(D) AND
+  NOT (B)-[:PLAYED_WITH]-(E) AND
+  NOT (C)-[:PLAYED_WITH]-(E)
+
+WITH
+  A,
+  B,
+  C,
+  D,
+  E,
   ab,
   bc,
   cd,
@@ -207,15 +280,100 @@ WITH
   (ab.weight + bc.weight + cd.weight + de.weight) AS total_weight
 
 RETURN
-  a.name AS Player_A,
+  A.name AS Player_A,
   ab.club AS Club_AB,
-  b.name AS Player_B,
+  B.name AS Player_B,
   bc.club AS Club_BC,
-  c.name AS Player_C,
+  C.name AS Player_C,
   cd.club AS Club_CD,
-  d.name AS Player_D,
+  D.name AS Player_D,
   de.club AS Club_DE,
-  e.name AS Player_E,
+  E.name AS Player_E,
   total_weight
-ORDER BY total_weight DESC
+ORDER BY total_weight * rand() DESC
+LIMIT 1000;
+
+// -----------------------------
+// 11. 5-Relationship Chain (A–B–C–D–E–F)
+// -----------------------------
+MATCH (a:Player)
+CALL
+  apoc.path.expandConfig(
+    a,
+    {
+      relationshipFilter: "PLAYED_WITH>",
+      minLevel: 5,
+      maxLevel: 5,
+      uniqueness: "NODE_GLOBAL",
+      bfs: true,
+      filterStartNode: true
+    }
+  )
+  YIELD path
+
+WITH path, nodes(path) AS nds, relationships(path) AS rels
+WHERE
+  size(rels) = 5 AND
+  rels[0].club <> rels[1].club AND
+  rels[1].club <> rels[2].club AND
+  rels[2].club <> rels[3].club AND
+  rels[3].club <> rels[4].club
+
+WITH
+  nds[0] AS A,
+  nds[1] AS B,
+  nds[2] AS C,
+  nds[3] AS D,
+  nds[4] AS E,
+  nds[5] AS F,
+  rels[0] AS ab,
+  rels[1] AS bc,
+  rels[2] AS cd,
+  rels[3] AS de,
+  rels[4] AS ef
+
+// canonical ordering (avoid reverse duplicates)
+WHERE
+  A.id < F.id AND
+
+  // prevent shortcut edges
+  NOT (A)-[:PLAYED_WITH]-(C) AND
+  NOT (A)-[:PLAYED_WITH]-(D) AND
+  NOT (A)-[:PLAYED_WITH]-(E) AND
+  NOT (A)-[:PLAYED_WITH]-(F) AND
+  NOT (B)-[:PLAYED_WITH]-(D) AND
+  NOT (B)-[:PLAYED_WITH]-(E) AND
+  NOT (B)-[:PLAYED_WITH]-(F) AND
+  NOT (C)-[:PLAYED_WITH]-(E) AND
+  NOT (C)-[:PLAYED_WITH]-(F) AND
+  NOT (D)-[:PLAYED_WITH]-(F)
+
+WITH
+  A,
+  B,
+  C,
+  D,
+  E,
+  F,
+  ab,
+  bc,
+  cd,
+  de,
+  ef,
+  (ab.weight + bc.weight + cd.weight + de.weight + ef.weight) AS total_weight
+
+RETURN
+  A.name AS Player_A,
+  ab.club AS Club_AB,
+  B.name AS Player_B,
+  bc.club AS Club_BC,
+  C.name AS Player_C,
+  cd.club AS Club_CD,
+  D.name AS Player_D,
+  de.club AS Club_DE,
+  E.name AS Player_E,
+  ef.club AS Club_EF,
+  F.name AS Player_F,
+  total_weight
+ORDER BY total_weight * rand() DESC
 LIMIT 1000;
