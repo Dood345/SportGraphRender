@@ -87,9 +87,9 @@ def generate_big5_season_league_urls(start_year: int, end_year: int) -> list[str
     leagues = {
         9: "Premier-League",
         12: "La-Liga",
-        20: "Bundesliga",
-        11: "Serie-A",
-        13: "Ligue-1",
+        # 20: "Bundesliga",
+        # 11: "Serie-A",
+        # 13: "Ligue-1",
     }
 
     urls = []
@@ -224,7 +224,7 @@ if __name__ == "__main__":
 
     player_links = set()
 
-    season_league_urls = generate_big5_season_league_urls(2015, 2025)
+    season_league_urls = generate_big5_season_league_urls(2020, 2025)
     print(season_league_urls)
 
     MAX_RETRIES = 3
