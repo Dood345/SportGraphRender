@@ -1,0 +1,6 @@
+setuptools
+selenium
+beautifulsoup4
+undetected-chromedriver
+
+# python script/scrape_fbref.py
