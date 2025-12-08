@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-APP_DIR="/opt/SportGraph/api/src"
+APP_DIR="/opt/SportGraph"
 VENV_DIR="/opt/SportGraph/.venv"
 
 echo ">>> Pulling latest code"
