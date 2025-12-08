@@ -68,7 +68,8 @@ class SoccerService:
         3. Fetch distractor options for each missing node
         4. Construct question with clubs, correct answers, and shuffled choices
         """
-        rows = await self.repo.get_n_step_teammate_paths(steps=steps, limit=num_questions)
+        rows = await self.repo.get_n_step_teammate_paths(steps, limit=num_questions)
+        # print(rows)
         if not rows:
             return []
 

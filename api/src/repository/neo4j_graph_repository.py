@@ -130,15 +130,15 @@ class Neo4jGraphRepository:
             MATCH (start:Player)
             CALL apoc.path.expandConfig(start, {
                 relationshipFilter: "PLAYED_WITH>",
-                minLevel: 2,
-                maxLevel: 2,
+                minLevel: $steps,
+                maxLevel: $steps,
                 uniqueness: "NODE_GLOBAL",
                 bfs: true,
                 filterStartNode: true
             }) YIELD path
 
             WITH nodes(path) AS nds, relationships(path) AS rels
-            WHERE size(rels) = 2
+            WHERE size(rels) = $steps
  
             // 1) Consecutive clubs must differ for all edges
             AND all(i IN range(0, size(rels) - 2) 
