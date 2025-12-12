@@ -2,8 +2,9 @@
 fastapi
 uvicorn[standard]
 
-# DB Drivers
-neo4j
+# Graph & Data
+pandas
+networkx
 
 # Web Scraping
 selenium

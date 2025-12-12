@@ -14,4 +14,8 @@ tar -xf neo4j.tar.gz
 mv neo4j-community-5.15.0 neo4j
 rm neo4j.tar.gz
 
+echo "Installing APOC plugin..."
+# Download APOC for Neo4j 5.x
+wget -qO neo4j/plugins/apoc.jar "https://github.com/neo4j-contrib/neo4j-apoc-procedures/releases/download/5.15.0/apoc-5.15.0-core.jar"
+
 echo "Build complete."

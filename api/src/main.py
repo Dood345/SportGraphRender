@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.src.dependencies import get_neo4j_connection_manager
+
 from .router import soccer_router
 
 
@@ -11,19 +11,17 @@ logging.basicConfig(
     level=logging.INFO,  # Enables INFO logs (fixes your issue)
     format="[%(levelname)s] %(message)s",
 )
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """FastAPI lifespan context: initialize and clean up shared resources."""
-    # ---- STARTUP ----
-    connection_manager = get_neo4j_connection_manager()
-    await connection_manager.verify_connection()
-
+    """FastAPI lifespan context."""
+    # Memory Graph loads lazily on first dependency call, 
+    # or we could force load here, but simpler to do nothing.
+    logger.info("Application Startup")
     yield
-
-    # ---- SHUTDOWN ----
-    connection_manager.close_all()
+    logger.info("Application Shutdown")
 
 
 app = FastAPI(lifespan=lifespan)

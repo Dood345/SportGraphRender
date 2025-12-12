@@ -5,16 +5,14 @@ from functools import lru_cache
 from dotenv import load_dotenv
 from fastapi import Depends
 
-from api.src.database.neo4j_connection_manager import Neo4jConnectionManager
-from api.src.repository.neo4j_graph_repository import Neo4jGraphRepository
+# New Memory Repository
+from api.src.repository.memory_graph_repository import MemoryGraphRepository
 from api.src.service.soccer_service import SoccerService
 
 
-
-load_dotenv()
 logger = logging.getLogger(__name__)
 
-
+# Load env if exists
 env_path = ".env"
 if os.path.exists(env_path):
     load_dotenv(env_path)
@@ -24,36 +22,20 @@ else:
 
 
 # ============================================================
-# 🔌 DATABASE CLIENT SETUP
+# 💾 REPOSITORY SETUP (In-Memory)
 # ============================================================
-
 
 @lru_cache(maxsize=1)
-def get_neo4j_connection_manager() -> Neo4jConnectionManager:
-    """Create and return a Neo4j connection manager."""
-    uri = os.environ["NEO4J_URI"]
-    user = os.environ["NEO4J_USER"]
-    password = os.environ["NEO4J_PASSWORD"]
-
-    logger.info(f"Neo4j URI: {uri}, Neo4j User: {user}")
-    return Neo4jConnectionManager(uri=uri, user=user, password=password)
-
-
-# ============================================================
-# 🏗️ REPOSITORY SETUP
-# ============================================================
-
-
-def get_neo4j_graph_repository(ncm: Neo4jConnectionManager = Depends(get_neo4j_connection_manager)) -> Neo4jGraphRepository:
-    """Provide an Graph repository using the connection manager."""
-    return Neo4jGraphRepository(ncm)
+def get_memory_repository() -> MemoryGraphRepository:
+    """Create and load the in-memory graph repository."""
+    repo = MemoryGraphRepository()
+    return repo
 
 
 # ============================================================
 # 🧩 SERVICE SETUP
 # ============================================================
 
-
-def get_soccer_service(ngr: Neo4jGraphRepository = Depends(get_neo4j_graph_repository)) -> SoccerService:
-    """Provide an SoccerService using the Graph Repository."""
-    return SoccerService(ngr)
+def get_soccer_service(repo: MemoryGraphRepository = Depends(get_memory_repository)) -> SoccerService:
+    """Provide an SoccerService using the Memory Repository."""
+    return SoccerService(repo)

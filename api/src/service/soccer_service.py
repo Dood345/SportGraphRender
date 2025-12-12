@@ -2,13 +2,12 @@ from typing import List, Dict, Any, Optional
 
 from fastapi import HTTPException, status
 
-from api.src.repository.neo4j_graph_repository import Neo4jGraphRepository
-
+from api.src.repository.memory_graph_repository import MemoryGraphRepository
 
 class SoccerService:
 
-    def __init__(self, repo: Neo4jGraphRepository):
-        self.repo: Neo4jGraphRepository = repo
+    def __init__(self, repo: MemoryGraphRepository):
+        self.repo: MemoryGraphRepository = repo
 
     async def get_player_by_id(self, player_id: str) -> Dict[str, Any]:
         """Fetch a player record by ID from Neo4j."""
