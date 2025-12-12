@@ -101,7 +101,7 @@ Example:
 VENV_DIR=venv
 REQ_FILE=requirements.txt
 API_HOST=127.0.0.1
-API_PORT=8000
+PORT=8000
 API_RELOAD_DIR=api/src
 
 NEO4J_URI=bolt://localhost:7687

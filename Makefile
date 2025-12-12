@@ -13,6 +13,14 @@ export
 # ===========================================
 # Variable Definition
 # ===========================================
+
+# Default values if not in .env
+VENV_DIR ?= .venv
+REQ_FILE ?= requirements.txt
+API_HOST ?= 0.0.0.0
+PORT ?= 8000
+API_RELOAD_DIR ?= api/src
+
 ifeq ($(OS),Windows_NT)
 	UNAME_S := Windows
 	ACTIVATE_PATH := $(VENV_DIR)/Scripts/activate
@@ -141,16 +149,16 @@ endif
 # -------------------------------------------
 ifeq ($(OS),Windows_NT)
 api-run: venv-ensure
-	@echo "Launching FastAPI on http://$(API_HOST):$(API_PORT)"
+	@echo "Launching FastAPI on http://$(API_HOST):$(PORT)"
 	@cmd /C "( \
 		call $(VENV_DIR)\Scripts\activate && \
-		$(PYTHON) -m uvicorn api.src.main:app --host $(API_HOST) --port $(API_PORT) --reload --reload-dir $(API_RELOAD_DIR) \
+		$(PYTHON) -m uvicorn api.src.main:app --host $(API_HOST) --port $(PORT) --reload --reload-dir $(API_RELOAD_DIR) \
 	)"
 else
 api-run: venv-ensure
-	@echo "Launching FastAPI on http://$(API_HOST):$(API_PORT)"
+	@echo "Launching FastAPI on http://$(API_HOST):$(PORT)"
 	@bash -c "source $(VENV_DIR)/bin/activate && \
-		$(PYTHON) -m uvicorn api.src.main:app --host $(API_HOST) --port $(API_PORT) --reload --reload-dir $(API_RELOAD_DIR)"
+		$(PYTHON) -m uvicorn api.src.main:app --host $(API_HOST) --port $(PORT) --reload --reload-dir $(API_RELOAD_DIR)"
 endif
 
 # -------------------------------------------
