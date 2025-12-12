@@ -1,11 +1,9 @@
 # ===========================================
 # Require .env file
 # ===========================================
-ifeq (,$(wildcard .env))
-$(error .env file not found! Please create one in the project root before running Make.)
-endif
+# .env is optional (for CI/CD)
 
-include .env
+-include .env
 export
 
 

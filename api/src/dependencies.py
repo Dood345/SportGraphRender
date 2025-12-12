@@ -10,7 +10,14 @@ from api.src.repository.neo4j_graph_repository import Neo4jGraphRepository
 from api.src.service.soccer_service import SoccerService
 
 
-load_dotenv()
+
+env_path = ".env"
+if os.path.exists(env_path):
+    load_dotenv(env_path)
+    logger.info("Loaded environment variables from .env")
+else:
+    logger.info(".env file not found, assuming variables are set in environment")
+
 
 
 logger = logging.getLogger(__name__)
