@@ -1,6 +1,6 @@
 # **SportGraph**
 
-A high-performance football analytics platform built using **FastAPI**, **Neo4j**, and **Python**, with full graph-based teammate analysis, club history modeling, shortest-path queries, and automated FBref data scraping.
+A high-performance football analytics platform built using **FastAPI** and **Python**, with full graph-based teammate analysis, club history modeling, shortest-path queries, and automated FBref data scraping.
 
 SportGraph models football as a **player-teammate graph**, enabling deep reasoning about how players connect across clubs, seasons, and leagues.
 
@@ -8,55 +8,31 @@ SportGraph models football as a **player-teammate graph**, enabling deep reasoni
 
 ## **📌 Key Features**
 
-### **Graph Analytics API**
+### **Graph Analytics API (In-Memory)**
+Powered by `pandas` and `networkx`, running entirely in memory for high performance and zero-dependency deployment.
 
 -   Player search with normalized fuzzy matching
 -   Player club history per season
 -   Club roster aggregation with filters:
-
     -   min/max appearances
     -   season range
     -   sort order
-
 -   N-step teammate chain MCQ generator
-
     -   hides internal nodes
     -   produces distractors using XOR teammate logic
-
 -   Shortest teammate path (name or ID)
 
 ### **Scraper (FBref Big-5 Leagues)**
-
 -   Automated multi-season scraper for:
-
-    -   Premier League
-    -   La Liga
-    -   Serie A
-    -   Bundesliga
-    -   Ligue 1
-
+    -   Premier League, La Liga, Serie A, Bundesliga, Ligue 1
 -   Normalizes player profile links
 -   Extracts season-by-season club statistics
--   Generates CSV output
--   Writes per-player progress to avoid duplicate scraping
+-   Generates CSV output (`data/save.csv`) which powers the graph.
 
-### **Production Deployment**
-
--   Systemd service (`sportgraph.service`)
--   Auto-update Bash script (`deploy.sh`)
--   Async Neo4j driver with connection pooling
-
-### **Developer Experience**
-
--   Full Makefile workflow:
-
-    -   Virtual env management
-    -   Install dependencies
-    -   Run API locally
-    -   Run tests
-    -   Coverage reports
-
--   Works on **Windows**, **macOS**, and **Linux** (OS-aware)
+### **Simple Deployment**
+-   Runs as a standard Python application.
+-   No external database required (Neo4j removed).
+-   Ready for Render, Railway, or any Python hosting.
 
 ---
 
@@ -67,23 +43,23 @@ SportGraph/
 │
 ├── api/
 │   ├── src/
-│   │   ├── database/
-│   │   │   └── neo4j_connection_manager.py
 │   │   ├── repository/
-│   │   │   └── neo4j_graph_repository.py
+│   │   │   └── memory_graph_repository.py  # Core graph logic (NetworkX)
 │   │   ├── service/
-│   │   │   └── soccer_service.py
+│   │   │   └── soccer_service.py           # Business logic
 │   │   └── router/
-│   │       └── soccer_router.py
+│   │       └── soccer_router.py            # API endpoints
 │   └── main.py
 │
-├── script/
-│   └── scrape_fbref_player.py
+├── data/
+│   └── save.csv                            # Graph data source
 │
-├── deploy.sh
-├── Makefile
+├── script/
+│   └── scrape_fbref_player.py              # Scraper script
+│
 ├── requirements.txt
 ├── .env
+├── Makefile
 └── README.md
 ```
 
@@ -92,10 +68,7 @@ SportGraph/
 # **⚙️ Setup Instructions**
 
 ## **1. Create a `.env` File**
-
-Your Makefile requires `.env` before running any commands.
-
-Example:
+Optional, but recommended.
 
 ```
 VENV_DIR=venv
@@ -103,36 +76,19 @@ REQ_FILE=requirements.txt
 API_HOST=127.0.0.1
 PORT=8000
 API_RELOAD_DIR=api/src
-
-NEO4J_URI=bolt://localhost:7687
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=yourpassword
+FRONTEND_URL=http://localhost:5173
 ```
 
 ---
 
 # **📦 Virtual Environment Commands (Makefile)**
 
-### **Create venv**
-
-```
-make venv-create
-```
-
-### **Install dependencies**
-
+### **Create & Install**
 ```
 make venv-install
 ```
 
-### **Ensure venv exists**
-
-```
-make venv-ensure
-```
-
-### **Open virtual environment shell**
-
+### **Open Shell**
 ```
 make venv-shell
 ```
@@ -141,20 +97,23 @@ make venv-shell
 
 # **🚀 Running the API**
 
-Start the FastAPI backend (auto-reload enabled):
+Start the FastAPI backend:
 
 ```
 make api-run
 ```
 
-Runs:
+Or manually:
+```
+uvicorn api.src.main:app --host 0.0.0.0 --port 8000 --reload
+```
 
+Runs:
 ```
 http://localhost:8000
 ```
 
-Open docs:
-
+Docs:
 ```
 http://localhost:8000/docs
 ```
@@ -163,180 +122,27 @@ http://localhost:8000/docs
 
 # **🧪 Run Tests**
 
-### **Run API test suite**
-
 ```
 make api-test
 ```
 
-### **Run with coverage**
-
+With coverage:
 ```
 make api-coverage
 ```
 
-Outputs:
-
--   Terminal report
--   HTML report → `htmlcov/`
--   XML report → `coverage.xml`
-
 ---
 
-# **🧠 API Overview**
+# **🚀 Deployment**
 
-## **Player Endpoints**
-
-| Method | Endpoint                      | Description          |
-| ------ | ----------------------------- | -------------------- |
-| GET    | `/soccer/player/id`           | Get player by ID     |
-| GET    | `/soccer/player/name`         | Search players       |
-| GET    | `/soccer/player/history/id`   | Club history by ID   |
-| GET    | `/soccer/player/history/name` | Club history by name |
-
----
-
-## **Club Player Analytics**
-
+### **Build**
 ```
-GET /soccer/club/players
+pip install -r requirements.txt
 ```
 
-Filters:
-
--   `min_apps`, `max_apps`
--   `season_from`, `season_to`
--   Sorting: `appearances`, `first_season`, `last_season`, `name`
-
----
-
-## **Teammate MCQ Questions**
-
+### **Run**
 ```
-GET /soccer/teammates/question
+uvicorn api.src.main:app --host 0.0.0.0 --port $PORT
 ```
-
-Produces questions like:
-
-"Given Player A and Player C, who was the missing teammate between them?"
-
-### Logic used:
-
--   N-step PLAYED_WITH path
--   Hide internal players
--   Each hidden node gets multiple-choice distractors
--   Distractors selected using XOR teammate rule
-
----
-
-## **Shortest Teammate Path**
-
-| Endpoint                          | Description                     |
-| --------------------------------- | ------------------------------- |
-| `/soccer/teammates/shortest/id`   | Shortest chain using player IDs |
-| `/soccer/teammates/shortest/name` | Shortest chain using names      |
-
-Returns:
-
--   ordered list of players
--   clubs on each hop
--   total path length
-
----
-
-# **📊 Scraper**
-
-### Run the FBref scraper:
-
-```
-python script/scrape_fbref_player.py
-```
-
-Outputs:
-
--   `data/player_club_history.csv`
--   `data/completed_players.txt`
-
-Automatically:
-
--   handles retries
--   restarts Selenium on failure
--   flushes data every write
--   normalizes URLs
--   merges consecutive seasons for same club
-
----
-
-# **🚀 Deployment (Linux Server)**
-
-### Deploy latest version:
-
-```
-./deploy.sh
-```
-
-Does:
-
-1. `git pull`
-2. `pip install -r requirements.txt`
-3. `systemctl restart sportgraph`
-4. Shows service status
-
----
-
-### **🧱 Systemd Example**
-
-```
-[Unit]
-Description=SportGraph API
-After=network.target
-
-[Service]
-User=ubuntu
-WorkingDirectory=/opt/SportGraph/api
-ExecStart=/opt/SportGraph/venv/bin/python -m api.src.main
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
----
-
-# **📘 Architecture Overview**
-
-### **1. API Layer (FastAPI)**
-
-Handles routing, validation, CORS, and returning structured responses.
-
-### **2. Service Layer**
-
-Implements:
-
--   teammate chain inference
--   MCQ generator
--   sorting/filter logic
--   input validation
-
-### **3. Repository Layer**
-
-Handles all Neo4j queries:
-
--   shortest paths
--   path expansion with APOC
--   club histories
--   distractor generation
-
-### **4. Data Layer**
-
-Asynchronous Neo4j driver with:
-
--   connection pooling
--   error logging
--   safe session handling
-
-### **5. Scraper Layer**
-
-Collects raw data → CSV → loaded into Neo4j.
 
 ---
