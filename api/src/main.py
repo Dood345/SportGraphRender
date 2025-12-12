@@ -38,6 +38,11 @@ origins = [
     "http://127.0.0.1:5173",
 ]
 
+# Add production frontend URL if set
+import os
+if os.getenv("FRONTEND_URL"):
+    origins.append(os.getenv("FRONTEND_URL"))
+
 
 app = CORSMiddleware(
     app=app,
